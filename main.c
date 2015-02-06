@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <time.h>
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -38,7 +39,7 @@ int main(void)
     VC_RECT_T       dst_rect;
     VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
 
-    VC_DISPMANX_ALPHA_T alpha = { DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS, 
+    VC_DISPMANX_ALPHA_T alpha = { DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
                              255, /*alpha 0->255*/
                              0 };
 
@@ -58,11 +59,6 @@ int main(void)
     packet[11] = hamming84(0);
     packet[12] = hamming84(0);
 
-    char message[32] = "Hello Raspberry Pi ABCDEFGHIJ";
-    int z;
-    for (z=0; z<32;z++)
-        packet[13+z] = parity(message[z]);
-
     vars = &gRectVars;
 
     bcm_host_init();
@@ -81,21 +77,6 @@ int main(void)
 
     vars->image = calloc( 1, pitch * height );
     assert(vars->image);
-
-    int x, xx, n;
-
-    for(x = 0;x < 45; x+=1) {
-        for (xx = 0; xx < 8; xx++) {
-            n = 2 * ((x * 8) + xx);
-            if ((packet[x] >> xx)&1) {
-                ((unsigned char *)(vars->image))[n] = 0xff;
-                ((unsigned char *)(vars->image))[n+1] = 0xff;
-            } else {
-                ((unsigned char *)(vars->image))[n] = 0x0;
-                ((unsigned char *)(vars->image))[n+1] = 0x0;
-            }
-        }
-    }
 
     vars->resource = vc_dispmanx_resource_create( type,
                                                   width,
@@ -137,7 +118,22 @@ int main(void)
 
     while(1) {
 
-/*        for(x = 0;x < 45; x+=1) {
+        time_t rawtime;
+        struct tm *info;
+        char buffer[32];
+
+        time( &rawtime );
+
+        info = localtime( &rawtime );
+
+        strftime(buffer,32,"RaspberryPi %a %d %b %H:%M/%S", info);
+
+        int z;
+        for (z=0; z<32;z++)
+            packet[13+z] = parity(buffer[z]);
+
+        int x, xx, n;
+        for(x = 0;x < 45; x+=1) {
             for (xx = 0; xx < 8; xx++) {
                 n = 2 * ((x * 8) + xx);
                 if ((packet[x] >> xx)&1) {
@@ -149,12 +145,16 @@ int main(void)
                 }
             }
         }
-*/
 
+        vc_dispmanx_rect_set( &dst_rect, 0, 0, width, height);
+        ret = vc_dispmanx_resource_write_data(  vars->resource,
+                                            type,
+                                            pitch,
+                                            vars->image,
+                                            &dst_rect );
+        assert( ret == 0 );
         sleep(1);
-
     }
-
 
     vars->update = vc_dispmanx_update_start( 10 );
     assert( vars->update );
