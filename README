@@ -1,0 +1,25 @@
+Teletext for Raspberry Pi
+
+This software generates a teletext signal in software. No hardware
+mods are needed.
+
+THIS WILL ONLY WORK ON A PAL TV!
+
+Usage:
+
+Have a Raspberry Pi connected to a TV by composite video in PAL mode.
+
+Build the programs:
+
+    make
+
+Twiddle the registers:
+
+    sudo ./tvctl 0 -16 0 16
+
+Run the demo:
+
+    ./teletext
+
+Press the text button on your TV remote.
+

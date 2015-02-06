@@ -73,7 +73,7 @@ int main(void)
     int width = 360;
     int height = 1;
     int pitch = ALIGN_UP(width*2, 32);
-    int aligned_height = ALIGN_UP(height, 16);
+    //int aligned_height = ALIGN_UP(height, 16);
 
     vars->image = calloc( 1, pitch * height );
     assert(vars->image);
