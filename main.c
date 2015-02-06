@@ -29,7 +29,7 @@ static RECT_VARS_T  gRectVars;
 */
 
 static DISPMANX_RESOURCE_HANDLE_T  resource[3];
-static int which = 0;
+static int next_resource = 0;
 static void *image;
 
 static DISPMANX_DISPLAY_HANDLE_T   display;
@@ -45,24 +45,29 @@ static unsigned short pal[256] = {
 
 void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg) {
 
-    int ret, next;
+    int ret;
     DISPMANX_UPDATE_HANDLE_T    update;
 
     update = vc_dispmanx_update_start( 10 );
     assert( update );
 
-    ret = vc_dispmanx_element_change_source( update, element, resource[which]);
+    ret = vc_dispmanx_element_change_source( update, element, resource[next_resource]);
     assert( ret == 0 );
 
     ret = vc_dispmanx_update_submit_sync( update );
     assert( ret == 0 );
-    next = which ^ 1;
-    which = 2; // use filler if next callback called before this one ends
 
-    // fill image
-    // write to resource
+    if(next_resource != 2) {
 
-    which = next; // queue up next real resource
+        int real_next_resource = next_resource ^ 1;
+        next_resource = 2; // use filler if next callback called before this one ends
+
+        // fill image
+        // write to resource
+
+        next_resource = real_next_resource; // queue up next real resource
+
+    }
 
 }
 
