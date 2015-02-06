@@ -29,6 +29,12 @@ typedef struct
 static RECT_VARS_T  gRectVars;
 
 
+#define RGB565(r,g,b) (((r)>>3)<<11 | ((g)>>2)<<5 | (b)>>3)
+static unsigned short pal[256] = {
+   RGB565(0,0,0),
+   RGB565(255,255,255),
+};
+
 
 int main(void)
 {
@@ -37,7 +43,7 @@ int main(void)
     int             ret;
     VC_RECT_T       src_rect;
     VC_RECT_T       dst_rect;
-    VC_IMAGE_TYPE_T type = VC_IMAGE_RGB565;
+    VC_IMAGE_TYPE_T type = VC_IMAGE_8BPP;
 
     VC_DISPMANX_ALPHA_T alpha = { DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
                              255, /*alpha 0->255*/
@@ -72,7 +78,7 @@ int main(void)
 
     int width = 360;
     int height = 1;
-    int pitch = ALIGN_UP(width*2, 32);
+    int pitch = ALIGN_UP(width, 32);
     //int aligned_height = ALIGN_UP(height, 16);
 
     vars->image = calloc( 1, pitch * height );
@@ -84,7 +90,8 @@ int main(void)
                                                   &vars->vc_image_ptr );
     assert( vars->resource );
 
-
+    ret = vc_dispmanx_resource_set_palette(  vars->resource, pal, 0, sizeof pal );
+    assert( ret == 0 );
 
     vc_dispmanx_rect_set( &dst_rect, 0, 0, width, height);
     ret = vc_dispmanx_resource_write_data(  vars->resource,
@@ -132,17 +139,13 @@ int main(void)
         for (z=0; z<32;z++)
             packet[13+z] = parity(buffer[z]);
 
-        int x, xx, n;
+        int x, xx, n=0;
+        unsigned char b;
         for(x = 0;x < 45; x+=1) {
+            b = packet[x];
             for (xx = 0; xx < 8; xx++) {
-                n = 2 * ((x * 8) + xx);
-                if ((packet[x] >> xx)&1) {
-                    ((unsigned char *)(vars->image))[n] = 0xff;
-                    ((unsigned char *)(vars->image))[n+1] = 0xff;
-                } else {
-                    ((unsigned char *)(vars->image))[n] = 0x0;
-                    ((unsigned char *)(vars->image))[n+1] = 0x0;
-                }
+                ((unsigned char *)(vars->image))[n++] = (b&1);
+                b = b>>1;
             }
         }
 
