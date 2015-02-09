@@ -6,8 +6,8 @@ INCLUDES+=-I$(SDKSTAGE)/opt/vc/include/ -I$(SDKSTAGE)/opt/vc/include/interface/v
 
 all: tvctl teletext
 
-teletext: main.o
-	$(CC) -o $@ -Wl,--whole-archive main.o $(LDFLAGS) -Wl,--no-whole-archive -rdynamic
+teletext: main.o buffer.o
+	$(CC) -o $@ -Wl,--whole-archive main.o buffer.o $(LDFLAGS) -Wl,--no-whole-archive -rdynamic
 
 %.o: %.c
 	@rm -f $@ 

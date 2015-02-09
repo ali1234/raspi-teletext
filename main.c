@@ -1,3 +1,24 @@
+/*
+   main.c - dispmanx teletext display
+   Copyright 2015 Alistair Buxton <a.j.buxton@gmail.com>
+
+   This file is part of raspi-teletext.
+
+   raspi-teletext is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   raspi-teletext is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with raspi-teletext. If not, see <http://www.gnu.org/licenses/>.
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -8,52 +29,39 @@
 
 #include "bcm_host.h"
 
+#include "buffer.h"
+
 #ifndef ALIGN_UP
 #define ALIGN_UP(x,y)  ((x + (y)-1) & ~((y)-1))
 #endif
 
-/*
-typedef struct
-{
-    DISPMANX_DISPLAY_HANDLE_T   display;
-    DISPMANX_MODEINFO_T         info;
-    void                       *image;
-    DISPMANX_UPDATE_HANDLE_T    update;
-    DISPMANX_RESOURCE_HANDLE_T  resource;
-    DISPMANX_ELEMENT_HANDLE_T   element;
-    uint32_t                    vc_image_ptr;
-
-} RECT_VARS_T;
-
-static RECT_VARS_T  gRectVars;
-*/
-
-static DISPMANX_RESOURCE_HANDLE_T  resource[3];
-static int next_resource = 0;
-static void *image;
-
 static DISPMANX_DISPLAY_HANDLE_T   display;
 static DISPMANX_ELEMENT_HANDLE_T   element;
+static DISPMANX_RESOURCE_HANDLE_T  resource[3];
+static int next_resource = 0;
+
+static unsigned short palette[256] = { 0x0, 0xffff, 0xf000 };
+
+uint8_t *image;
+VC_RECT_T image_rect;
+#define TYPE (VC_IMAGE_8BPP)
+#define WIDTH (370)
+#define HEIGHT (32)
+#define OFFSET (8)
+#define PITCH (ALIGN_UP(WIDTH, 32))
+#define ROW(n) (image+(PITCH*(n))+OFFSET)
 
 
-#define RGB565(r,g,b) (((r)>>3)<<11 | ((g)>>2)<<5 | (b)>>3)
-static unsigned short pal[256] = {
-    RGB565(0,0,0),
-    RGB565(255,255,255),
-    RGB565(255,0,0),
-};
-
-void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg) {
+void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
+{
 
     int ret;
     DISPMANX_UPDATE_HANDLE_T    update;
 
     update = vc_dispmanx_update_start( 10 );
     assert( update );
-
     ret = vc_dispmanx_element_change_source( update, element, resource[next_resource]);
     assert( ret == 0 );
-
     ret = vc_dispmanx_update_submit_sync( update );
     assert( ret == 0 );
 
@@ -63,90 +71,87 @@ void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg) {
         next_resource = 2; // use filler if next callback called before this one ends
 
         // fill image
+        int n;
+        for (n=0; n<HEIGHT; n+=2) {
+            get_packet(ROW(n)+24); // +24 because clock never changes
+            memcpy(ROW(n+1)+24, ROW(n)+24, 336); // double it up because the hardware scaler
+                                                 // will introduce blurring between lines
+        }
+
         // write to resource
+        ret = vc_dispmanx_resource_write_data(  resource[real_next_resource], TYPE, PITCH, image, &image_rect );
+        assert( ret == 0 );
 
         next_resource = real_next_resource; // queue up next real resource
 
     }
-
 }
 
 int main(void)
 {
-    int             ret;
+    int ret;
     VC_RECT_T       src_rect;
     VC_RECT_T       dst_rect;
-    VC_IMAGE_TYPE_T type = VC_IMAGE_8BPP;
 
     DISPMANX_UPDATE_HANDLE_T    update;
     uint32_t                    vc_image_ptr;
-
-    VC_DISPMANX_ALPHA_T alpha = { DISPMANX_FLAGS_ALPHA_FROM_SOURCE | DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS,
-                             255, /*alpha 0->255*/
-                             0 };
 
     bcm_host_init();
 
     display = vc_dispmanx_display_open( 0 );
 
-    int width = 360;
-    int height = 16;
-    int pitch = ALIGN_UP(width, 32);
-    //int aligned_height = ALIGN_UP(height, 16);
-
-    image = calloc( 1, pitch * height ); // buffer 0
+    image = calloc( 1, PITCH * HEIGHT ); // buffer 0
     assert(image);
 
-    vc_dispmanx_rect_set( &dst_rect, 0, 0, width, height);
+    // initialize image buffer with clock run in
+    int n, m, clock = 0x275555;
+    for (m=0; m<24; m++) {
+        for (n=0; n<HEIGHT; n++) {
+            ROW(n)[m] = clock&1;
+        }
+        clock = clock >> 1;
+    }
 
-    resource[0] = vc_dispmanx_resource_create( type, width, height, &vc_image_ptr );
-    assert( resource[0] );
-    ret = vc_dispmanx_resource_set_palette(  resource[0], pal, 0, sizeof pal );
-    assert( ret == 0 );
-    ret = vc_dispmanx_resource_write_data(  resource[0], type, pitch, image, &dst_rect );
-    assert( ret == 0 );
+    // fill up image with filler packets
+    // get_packet will return filler because we haven't loaded the fifo yet.
+    get_packet(ROW(0)+24);
+    for (n=1; n<HEIGHT; n++) {
+        memcpy(ROW(n)+24, ROW(0)+24, 336);
+    }
 
-    memset(image, 1, pitch * height); // buffer 1
-
-    resource[1] = vc_dispmanx_resource_create( type, width, height, &vc_image_ptr );
-    assert( resource[1] );
-    ret = vc_dispmanx_resource_set_palette(  resource[1], pal, 0, sizeof pal );
-    assert( ret == 0 );
-    ret = vc_dispmanx_resource_write_data(  resource[1], type, pitch, image, &dst_rect );
-    assert( ret == 0 );
-
-    memset(image, 2, pitch * height); // filler
-
-    resource[2] = vc_dispmanx_resource_create( type, width, height, &vc_image_ptr );
-    assert( resource[2] );
-    ret = vc_dispmanx_resource_set_palette(  resource[2], pal, 0, sizeof pal );
-    assert( ret == 0 );
-    ret = vc_dispmanx_resource_write_data(  resource[2], type, pitch, image, &dst_rect );
-    assert( ret == 0 );
-
-    memset(image, 1, pitch * height);
-
+    // set up some resources
+    vc_dispmanx_rect_set( &image_rect, 0, 0, WIDTH, HEIGHT);
+    for (n=0;n<3;n++) {
+        resource[n] = vc_dispmanx_resource_create( TYPE, WIDTH, HEIGHT, &vc_image_ptr );
+        assert( resource[n] );
+        ret = vc_dispmanx_resource_set_palette(  resource[n], palette, 0, sizeof palette );
+        assert( ret == 0 );
+        ret = vc_dispmanx_resource_write_data(  resource[n], TYPE, PITCH, image, &image_rect );
+        assert( ret == 0 );
+    }
+    vc_dispmanx_rect_set( &image_rect, OFFSET+24, 0, 336, HEIGHT); // from now on, only copy the parts that change
 
     update = vc_dispmanx_update_start( 10 );
     assert( update );
 
-
-
-    vc_dispmanx_rect_set( &src_rect, 0, 0, width << 16, height << 16 );
-    vc_dispmanx_rect_set( &dst_rect, 10, 0, 700, 64 );
-    element = vc_dispmanx_element_add( update, display,
-                                       2000,               // layer
+    vc_dispmanx_rect_set( &src_rect, 0, 0, WIDTH << 16, HEIGHT << 16 );
+    vc_dispmanx_rect_set( &dst_rect, 0, 0, 720, HEIGHT );
+    element = vc_dispmanx_element_add( update, display, 2000,
                                        &dst_rect, resource[2], &src_rect,
                                        DISPMANX_PROTECTION_NONE,
-                                       &alpha, NULL, VC_IMAGE_ROT0 );
+                                       NULL, NULL, VC_IMAGE_ROT0 );
 
     ret = vc_dispmanx_update_submit_sync( update );
     assert( ret == 0 );
 
+    // BUG: clear any existing callbacks, even to other apps.
+    // https://github.com/raspberrypi/userland/issues/218
+    vc_dispmanx_vsync_callback(display, NULL, NULL);
+
     vc_dispmanx_vsync_callback(display, vsync, NULL);
 
-    while(1) {
-        sleep(1);
+    while(read_packets()) {
+        ;
     }
 
     vc_dispmanx_vsync_callback(display, NULL, NULL); // disable callback
@@ -157,15 +162,12 @@ int main(void)
     assert( ret == 0 );
     ret = vc_dispmanx_update_submit_sync( update );
     assert( ret == 0 );
-    ret = vc_dispmanx_resource_delete( resource[0] );
-    assert( ret == 0 );
-    ret = vc_dispmanx_resource_delete( resource[1] );
-    assert( ret == 0 );
-    ret = vc_dispmanx_resource_delete( resource[2] );
-    assert( ret == 0 );
+    for (n=0; n<3; n++) {
+        ret = vc_dispmanx_resource_delete( resource[0] );
+        assert( ret == 0 );
+    }
     ret = vc_dispmanx_display_close( display );
     assert( ret == 0 );
 
     return 0;
 }
-
