@@ -86,8 +86,16 @@ int main(int argc, char **argv) {
     values[6] = regs[8]&0xffff;
     values[7] = (regs[8]>>16)&0xffff;
 
+    int state;
 
-    if(argc == 9) {
+    if (regs[5] == 0x00140003 && regs[6] == 0x00020120 && regs[7] == 0x00130003 && regs[8] == 0x00020120)
+        state = 0;
+    else if (regs[5] == 0x00040003 && regs[6] == 0x00120120 && regs[7] == 0x00030003 && regs[8] == 0x00120120)
+        state = 1;
+    else
+        state = 2;
+
+    if (argc == 9) {
         int n;
         for (n=0; n< 8; n++)
             values[n] += strtoul(argv[n+1], 0, 0);
@@ -113,6 +121,38 @@ int main(int argc, char **argv) {
         regs[7] = values[4] | values[5]<<16;
         regs[8] = values[6] | values[7]<<16;
 
+    }
+
+    if (argc == 2 && argv[1][1] == 'n') {
+        switch(state) {
+            case 0:
+                regs[5] = 0x00040003;
+                regs[6] = 0x00120120;
+                regs[7] = 0x00030003;
+                regs[8] = 0x00120120;
+            case 1:
+                fprintf(stderr, "Teletext output is now on.\n");
+                exit(0);
+            default:
+                fprintf(stderr, "Output in unknown state. Switch to PAL mode.\n");
+                exit(-1);
+        }
+    }
+
+    if (argc == 2 && argv[1][1] == 'f') {
+        switch(state) {
+            case 1:
+                regs[5] = 0x00140003;
+                regs[6] = 0x00020120;
+                regs[7] = 0x00130003;
+                regs[8] = 0x00020120;
+            case 0:
+                fprintf(stderr, "Teletext output is now off.\n");
+                exit(0);
+            default:
+                fprintf(stderr, "Output in unknown state. Switch to PAL mode.\n");
+                exit(-1);
+        }
     }
 
     printf("           C 0x%08x\n", regs[0]);
