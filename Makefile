@@ -4,10 +4,12 @@ LDFLAGS+=-L$(SDKSTAGE)/opt/vc/lib/ -lGLESv2 -lEGL -lopenmaxil -lbcm_host -lvcos 
 
 INCLUDES+=-I$(SDKSTAGE)/opt/vc/include/ -I$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads -I$(SDKSTAGE)/opt/vc/include/interface/vmcs_host/linux -I./ -I../libs/ilclient -I../libs/vgfont
 
+OFILES=main.o buffer.o hamming.o demo.o
+
 all: tvctl teletext
 
-teletext: main.o buffer.o
-	$(CC) -o $@ -Wl,--whole-archive main.o buffer.o $(LDFLAGS) -Wl,--no-whole-archive -rdynamic
+teletext: $(OFILES)
+	$(CC) -o $@ -Wl,--whole-archive $(OFILES) $(LDFLAGS) -Wl,--no-whole-archive -rdynamic
 
 %.o: %.c
 	@rm -f $@ 

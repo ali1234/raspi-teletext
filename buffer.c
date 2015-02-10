@@ -65,6 +65,15 @@ void get_packet(uint8_t *dest)
     }
 }
 
+void push_packet(uint8_t *src)
+{
+    while (((buffer_head+1)%NBUFFERS) == buffer_tail) {
+        usleep(20000);
+    }
+    memcpy(tt_buffer[buffer_head], src, 42);
+    buffer_head = (buffer_head+1)%NBUFFERS;
+}
+
 int read_packets(void)
 {
     if (((buffer_head+1)%NBUFFERS) == buffer_tail) {

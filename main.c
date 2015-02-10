@@ -30,6 +30,7 @@
 #include "bcm_host.h"
 
 #include "buffer.h"
+#include "demo.h"
 
 #ifndef ALIGN_UP
 #define ALIGN_UP(x,y)  ((x + (y)-1) & ~((y)-1))
@@ -87,7 +88,7 @@ void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
     }
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     int ret;
     VC_RECT_T       src_rect;
@@ -150,8 +151,12 @@ int main(void)
 
     vc_dispmanx_vsync_callback(display, vsync, NULL);
 
-    while(read_packets()) {
-        ;
+    if (argc == 2 && argv[1][0] == '-') {
+        while(read_packets()) {
+            ;
+        }
+    } else {
+        demo();
     }
 
     vc_dispmanx_vsync_callback(display, NULL, NULL); // disable callback
