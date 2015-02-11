@@ -6,13 +6,13 @@ mods are needed.
 
 THIS WILL ONLY WORK ON A PAL TV!
 
-UPDATE: This demo will also crash modern LCD TV's teletext decoder.
-It's because the demo sends the same packet over and over and new
-TVs can't handle it...
+(The demo mode should no longer crash TVs!)
 
 Usage:
 
 Have a Raspberry Pi connected to a TV by composite video in PAL mode.
+It doesn't matter if you are running X or not. Dispmanx will draw over
+anything else.
 
 Build the programs:
 
