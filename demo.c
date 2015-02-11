@@ -42,7 +42,7 @@ void get_cpu(void)
     fscanf(fp,"%d",&n);
     fclose(fp);
 
-    str_parity(&buffer[ 8][25], 14, "Freq.:\x03%dMHz", n/1000);
+    str_parity(&buffer[0][ 8][25], 14, "Freq.:\x03%dMHz", n/1000);
 
     fp = fopen("/proc/stat", "r");
     fscanf(fp,"%*s %Lf %Lf %Lf %Lf",&b[0],&b[1],&b[2],&b[3]);
@@ -55,10 +55,10 @@ void get_cpu(void)
     total = c[0] + c[1] + c[2] + c[3];
     memcpy (a, b, sizeof a);
 
-    str_parity(&buffer[10][26], 12, "User:\x03%5.1f%%", c[0]*100.0/total);
-    str_parity(&buffer[11][26], 12, "Nice:\x03%5.1f%%", c[1]*100.0/total);
-    str_parity(&buffer[12][26], 12, "Sys.:\x03%5.1f%%", c[2]*100.0/total);
-    str_parity(&buffer[13][26], 12, "Idle:\x03%5.1f%%", c[3]*100.0/total);
+    str_parity(&buffer[0][10][26], 12, "User:\x03%5.1f%%", c[0]*100.0/total);
+    str_parity(&buffer[0][11][26], 12, "Nice:\x03%5.1f%%", c[1]*100.0/total);
+    str_parity(&buffer[0][12][26], 12, "Sys.:\x03%5.1f%%", c[2]*100.0/total);
+    str_parity(&buffer[0][13][26], 12, "Idle:\x03%5.1f%%", c[3]*100.0/total);
 
 }
 
@@ -72,8 +72,8 @@ void get_mem(void)
     fscanf(fp,"%*s %d kB\n",&mem[1]);
     fclose(fp);
 
-    str_parity(&buffer[15][26], 12, "Mem.:\x03%4dMB", mem[0]/1024);
-    str_parity(&buffer[16][26], 12, "Free:\x03%4dMB", mem[1]/1024);
+    str_parity(&buffer[0][15][26], 12, "Mem.:\x03%4dMB", mem[0]/1024);
+    str_parity(&buffer[0][16][26], 12, "Free:\x03%4dMB", mem[1]/1024);
 }
 
 void get_net(void)
@@ -86,7 +86,7 @@ void get_net(void)
 
     gethostname(tmp, 14);
     tmp[14] = 0;
-    str_parity(&buffer[3][2], 15, "\x0d%14s", tmp);
+    str_parity(&buffer[0][3][2], 15, "\x0d%14s", tmp);
 
     fp = popen("/sbin/ip -o -f inet addr show scope global", "r");
     fgets(tmp, 99, fp);
@@ -99,7 +99,7 @@ void get_net(void)
     }
 
     if(tokens[1] && tokens[3]) {
-        str_parity(&buffer[3][18], 22, "%5s:\x03%s", tokens[1], tokens[3]);
+        str_parity(&buffer[0][3][18], 22, "%5s:\x03%s", tokens[1], tokens[3]);
     }
 }
 
@@ -116,7 +116,7 @@ void get_temp(void)
     pch = strtok (NULL,"=\n");
 
     if(pch) {
-        str_parity(&buffer[18][25], 14, "Temp.:\x03%6s", pch);
+        str_parity(&buffer[0][18][25], 14, "Temp.:\x03%6s", pch);
     }
 }
 
@@ -131,12 +131,15 @@ void get_time(void)
     info = localtime( &rawtime );
 
     strftime(tmp, 21, "\x02%a %d %b\x03%H:%M/%S", info);
-    str_parity(&buffer[0][22], 20, tmp);
+    str_parity(&buffer[0][0][22], 20, tmp);
+    str_parity(&buffer[1][0][22], 20, tmp);
 }
 
 void demo(void)
 {
     int n, z=0;
+
+    uint8_t page = 0;
 
     get_cpu();
     sleep(1);
@@ -151,9 +154,14 @@ void demo(void)
                 get_temp();
             }
         }
+
+        // flip between page 100 and page 101
+        page = page ^ 1;
+
         for( n=0; n<24; n++) {
-            push_packet(buffer[n]);
+            push_packet(buffer[page][n]);
         }
+
         usleep(100000);
         z++;
     }
