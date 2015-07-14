@@ -42,30 +42,8 @@
 #define MAP_SIZE 4096UL
 #define MAP_MASK (MAP_SIZE - 1)
 
-int main(int argc, char **argv) {
-    int fd;
-    void *map_base;
-
-    volatile unsigned int *regs;
-
-    unsigned int values[8];
-
-    if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
-        printf("Error...\n"); exit(-1);
-    }
-
-    /* Map TV page */
-    map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x20807000);
-    if(map_base == (void *) -1) {
-        printf("Error...\n"); exit(-1);
-    }
-
-    // do stuff...
-
-    regs = map_base;
-
-    // field timings?
-
+int try_set_regs(volatile unsigned int *regs, int argc, char *argv[])
+{
     // each register is two shorts
 
     // eg: reg[5] = 0014 0003 - means 0x14 lines then 0x3 lines above the visible
@@ -77,15 +55,6 @@ int main(int argc, char **argv) {
 
     // question: what is the difference between the two values in reg[5]/reg[7] register?
 
-    values[0] = regs[5]&0xffff;
-    values[1] = (regs[5]>>16)&0xffff;
-    values[2] = regs[6]&0xffff;
-    values[3] = (regs[6]>>16)&0xffff;
-    values[4] = regs[7]&0xffff;
-    values[5] = (regs[7]>>16)&0xffff;
-    values[6] = regs[8]&0xffff;
-    values[7] = (regs[8]>>16)&0xffff;
-
     int state;
 
     if (regs[5] == 0x00140003 && regs[6] == 0x00020120 && regs[7] == 0x00130003 && regs[8] == 0x00020120)
@@ -94,34 +63,6 @@ int main(int argc, char **argv) {
         state = 1;
     else
         state = 2;
-
-    if (argc == 9) {
-        int n;
-        for (n=0; n< 8; n++)
-            values[n] += strtoul(argv[n+1], 0, 0);
-
-        regs[5] = values[0] | values[1]<<16;
-        regs[6] = values[2] | values[3]<<16;
-
-        regs[7] = values[4] | values[5]<<16;
-        regs[8] = values[6] | values[7]<<16;
-
-    }
-
-    if (argc == 5) {
-        int n;
-        for (n=0; n< 4; n++) {
-            values[n] += strtoul(argv[n+1], 0, 0);
-            values[n+4] += strtoul(argv[n+1], 0, 0);
-        }
-
-        regs[5] = values[0] | values[1]<<16;
-        regs[6] = values[2] | values[3]<<16;
-
-        regs[7] = values[4] | values[5]<<16;
-        regs[8] = values[6] | values[7]<<16;
-
-    }
 
     if (argc == 2 && argv[1][1] == 'n') {
         switch(state) {
@@ -132,10 +73,9 @@ int main(int argc, char **argv) {
                 regs[8] = 0x00120120;
             case 1:
                 fprintf(stderr, "Teletext output is now on.\n");
-                exit(0);
+                return 1;
             default:
-                fprintf(stderr, "Output in unknown state. Switch to PAL mode.\n");
-                exit(-1);
+                return 0;
         }
     }
 
@@ -148,27 +88,45 @@ int main(int argc, char **argv) {
                 regs[8] = 0x00020120;
             case 0:
                 fprintf(stderr, "Teletext output is now off.\n");
-                exit(0);
+                return 1;
             default:
-                fprintf(stderr, "Output in unknown state. Switch to PAL mode.\n");
-                exit(-1);
+                return 0;
         }
     }
 
-    printf("           C 0x%08x\n", regs[0]);
-    printf("          VC 0x%08x\n", regs[1]);
-    printf(" VSYNCD_EVEN 0x%08x\n", regs[2]);
-    printf("       HORZA 0x%08x (%d %d)\n", regs[3], (regs[3])&0xffff, (regs[3]>>16)&0xffff);
-    printf("       HORZB 0x%08x (%d %d)\n", regs[4], (regs[4])&0xffff, (regs[4]>>16)&0xffff);
-    printf("       VERTA 0x%08x (%d %d)\n", regs[5], (regs[5])&0xffff, (regs[5]>>16)&0xffff);
-    printf("       VERTB 0x%08x (%d %d)\n", regs[6], (regs[6])&0xffff, (regs[6]>>16)&0xffff);
-    printf("  VERTA_EVEN 0x%08x (%d %d)\n", regs[7], (regs[7])&0xffff, (regs[7]>>16)&0xffff);
-    printf("  VERTB_EVEN 0x%08x (%d %d)\n", regs[8], (regs[8])&0xffff, (regs[8]>>16)&0xffff);
-    printf("       INTEN 0x%08x\n", regs[9]);
-    printf("     INTSTAT 0x%08x\n", regs[10]);
-    printf("        STAT 0x%08x\n", regs[11]);
-    printf("DSI_HACT_ACT 0x%08x\n", regs[12]);
+    fprintf(stderr, "Usage: %s (on|off)\n", argv[0]);
+    return 1;
+}
 
+
+int main(int argc, char **argv)
+{
+    int fd;
+    void *map_base;
+
+    if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) {
+        fprintf(stderr, "Error opening /dev/mem.\n"); exit(-1);
+    }
+
+    /* Map TV page */
+    map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x20807000);
+
+    if(map_base == (void *) -1) {
+        fprintf(stderr, "Error mapping register memory.\n"); exit(-1);
+    }
+
+    if(!try_set_regs(map_base, argc, argv)) {
+
+        map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x3f807000);
+        if(map_base == (void *) -1) {
+            fprintf(stderr, "Error mapping register memory.\n"); exit(-1);
+        }
+
+        if(!try_set_regs(map_base, argc, argv)) {
+            fprintf(stderr, "Could not find registers. Make sure TV out is set to PAL mode.\n");
+        }
+
+    }
 
     // clean up
     close(fd);
