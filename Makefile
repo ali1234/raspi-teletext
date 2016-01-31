@@ -4,16 +4,21 @@ LDFLAGS+=-L$(SDKSTAGE)/opt/vc/lib/ -lGLESv2 -lEGL -lopenmaxil -lbcm_host -lvcos 
 
 INCLUDES+=-I$(SDKSTAGE)/opt/vc/include/ -I$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads -I$(SDKSTAGE)/opt/vc/include/interface/vmcs_host/linux -I./ -I../libs/ilclient -I../libs/vgfont
 
-OFILES=teletext.o buffer.o hamming.o demo.o
+TELETEXT_OFILES=teletext.o buffer.o hamming.o demo.o
 
-all: tvctl teletext
+CEA608_OFILES=cea608.o cea608buffer.o
 
-teletext: $(OFILES)
-	$(CC) -o $@ -Wl,--whole-archive $(OFILES) $(LDFLAGS) -Wl,--no-whole-archive -rdynamic
+all: tvctl teletext cea608
+
+teletext: $(TELETEXT_OFILES)
+	$(CC) -o $@ -Wl,--whole-archive $(TELETEXT_OFILES) $(LDFLAGS) -Wl,--no-whole-archive -rdynamic
+
+cea608: $(CEA608_OFILES)
+	$(CC) -o $@ -Wl,--whole-archive $(CEA608_OFILES) $(LDFLAGS) -Wl,--no-whole-archive -rdynamic
 
 %.o: %.c
 	@rm -f $@ 
 	$(CC) $(CFLAGS) $(INCLUDES) -g -c $< -o $@ -Wno-deprecated-declarations
 
 clean:
-	rm -f *.o teletext tvctl
+	rm -f *.o teletext cea608 tvctl
