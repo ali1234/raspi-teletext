@@ -4,13 +4,13 @@ Teletext for Raspberry Pi
 This software generates a teletext signal in software. No hardware
 mods are needed.
 
-THIS WILL ONLY WORK ON A PAL TV!
+This support both PAL (Teletext) and NTSC (CEA608 format captions).
 
 (The demo mode should no longer crash TVs!)
 
 Usage:
 
-Have a Raspberry Pi connected to a TV by composite video in PAL mode.
+Have a Raspberry Pi connected to a TV by composite video.
 It doesn't matter if you are running X or not. Dispmanx will draw over
 anything else.
 
@@ -24,11 +24,17 @@ Twiddle the registers:
 
 Ensure you see the message "Teletext output is now on."
 
-Run the demo:
+If you're connected via PAL, run the demo:
 
     ./teletext
 
-Press the text button on your TV remote.
+and press the text button on your TV remote.
+
+If you're connected using NTSC, run the demo:
+
+    ./cea608
+
+and enable the TV's closed caption controls to show CC1.
 
 Detailed Usage
 --------------
@@ -56,4 +62,14 @@ http://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p
 
 for details of the teletext protocol.
 
+    cea608 <->
 
+Running with no arguments will show a demo.  Running "cea608 -"
+will read data from stdin and display.  The data is in binary format,
+with each field represented as two bytes of parity-encoded data.
+This is the "raw" format some capture tools can output.  Data is
+output at 59.97 fields per second.  See
+
+https://en.wikipedia.org/wiki/EIA-608
+
+for details on the protocol and links to the specifications.
