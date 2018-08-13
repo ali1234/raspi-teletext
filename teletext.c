@@ -52,6 +52,7 @@ VC_RECT_T image_rect;
 #define PITCH (ALIGN_UP(WIDTH, 32))
 #define ROW(n) (image+(PITCH*(n))+OFFSET)
 
+int mask;
 
 void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
 {
@@ -74,9 +75,12 @@ void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
         // fill image
         int n;
         for (n=0; n<HEIGHT; n+=2) {
-            get_packet(ROW(n)+24); // +24 because clock never changes
-            memcpy(ROW(n+1)+24, ROW(n)+24, 336); // double it up because the hardware scaler
-                                                 // will introduce blurring between lines
+            if (!(mask & (1<<(n>>1)))) // ignore masked lines
+            {
+                get_packet(ROW(n)+24); // +24 because clock never changes
+                memcpy(ROW(n+1)+24, ROW(n)+24, 336); // double it up because the hardware scaler
+                                                     // will introduce blurring between lines
+            }
         }
 
         // write to resource
@@ -104,6 +108,25 @@ int main(int argc, char *argv[])
     image = calloc( 1, PITCH * HEIGHT ); // buffer 0
     assert(image);
 
+    int c;
+    char *mvalue = NULL;
+    while ((c = getopt(argc,argv,"m:")) != -1)
+    {
+        switch(c)
+        {
+             case 'm':
+                 mvalue = optarg;
+                 break;
+        }
+    }
+
+    if (mvalue)
+    {
+        mask = strtol(mvalue,NULL,0);
+    }
+    else
+        mask = 0; // default to all 16 vbi lines used
+ 
     // initialize image buffer with clock run in
     int n, m, clock = 0x275555;
     for (m=0; m<24; m++) {
@@ -115,9 +138,17 @@ int main(int argc, char *argv[])
 
     // fill up image with filler packets
     // get_packet will return filler because we haven't loaded the fifo yet.
-    get_packet(ROW(0)+24);
-    for (n=1; n<HEIGHT; n++) {
-        memcpy(ROW(n)+24, ROW(0)+24, 336);
+    for (n=0; n<HEIGHT; n+=2) {
+        if (mask & (1<<(n>>1))) // make masked lines quiet
+        {
+            memset(ROW(n),0, WIDTH);
+            memcpy(ROW(n+1), ROW(n), WIDTH);
+        }
+        else
+        {
+            get_packet(ROW(n)+24);
+            memcpy(ROW(n+1)+24, ROW(n)+24, 336);
+        }
     }
 
     // set up some resources
@@ -151,7 +182,7 @@ int main(int argc, char *argv[])
 
     vc_dispmanx_vsync_callback(display, vsync, NULL);
 
-    if (argc == 2 && argv[1][0] == '-') {
+    if (argc >= 2 && strlen(argv[argc-1])==1 && argv[argc-1][0] == '-') { // last argument is a single '-'
         while(read_packets()) {
             ;
         }
@@ -168,7 +199,7 @@ int main(int argc, char *argv[])
     ret = vc_dispmanx_update_submit_sync( update );
     assert( ret == 0 );
     for (n=0; n<3; n++) {
-        ret = vc_dispmanx_resource_delete( resource[n] );
+        ret = vc_dispmanx_resource_delete( resource[0] );
         assert( ret == 0 );
     }
     ret = vc_dispmanx_display_close( display );
