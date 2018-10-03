@@ -52,7 +52,8 @@ VC_RECT_T image_rect;
 #define PITCH (ALIGN_UP(WIDTH, 32))
 #define ROW(n) (image+(PITCH*(n))+OFFSET)
 
-int mask;
+uint16_t mask_even;
+uint16_t mask_odd;
 
 void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
 {
@@ -74,12 +75,19 @@ void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
 
         // fill image
         int n;
-        for (n=0; n<HEIGHT; n+=2) {
-            if (!(mask & (1<<(n>>1)))) // ignore masked lines
-            {
-                get_packet(ROW(n)+24); // +24 because clock never changes
-                memcpy(ROW(n+1)+24, ROW(n)+24, 336); // double it up because the hardware scaler
-                                                     // will introduce blurring between lines
+        int m;
+        if(real_next_resource == 0) {
+            m = mask_even;
+            for (n = 0; n < HEIGHT; n += 2) {
+                if (!(m & 1)) get_packet(ROW(n) + 24); // +24 because clock never changes
+                m >>= 1;
+            }
+        }
+        else {
+            m = mask_odd;
+            for (n=0; n<HEIGHT; n+=2) {
+                if (!(m&1)) get_packet(ROW(n+1)+24);
+                m >>= 1;
             }
         }
 
@@ -110,45 +118,49 @@ int main(int argc, char *argv[])
 
     int c;
     char *mvalue = NULL;
-    while ((c = getopt(argc,argv,"m:")) != -1)
+    char *ovalue = NULL;
+    while ((c = getopt(argc,argv,"m:o:")) != -1)
     {
         switch(c)
         {
-             case 'm':
-                 mvalue = optarg;
-                 break;
+            case 'm':
+                mvalue = optarg;
+                break;
+            case 'o':
+                ovalue = optarg;
+                break;
         }
     }
 
+    mask_even = 0; // default to all 16 vbi lines used on both fields
+    mask_odd = 0;
+    
     if (mvalue)
     {
-        mask = strtol(mvalue,NULL,0);
+        mask_even = strtol(mvalue,NULL,0);
+        if (!ovalue)
+            mask_odd = mask_even;
     }
-    else
-        mask = 0; // default to all 16 vbi lines used
+    if (ovalue)
+    {
+        mask_odd = strtol(ovalue,NULL,0);
+        if (!mvalue)
+            mask_even = mask_odd;
+    }
  
     // initialize image buffer with clock run in
     int n, m, clock = 0x275555;
     for (m=0; m<24; m++) {
-        for (n=0; n<HEIGHT; n++) {
-            ROW(n)[m] = clock&1;
+        int even = mask_even;
+        int odd = mask_odd;
+        for (n=0; n<HEIGHT; n+=2) {
+            if (!(even&1)) ROW(n)[m] = clock&1;
+            if (!(odd&1)) ROW(n+1)[m] = clock&1;
+            even >>= 1;
+            odd >>= 1;
         }
+        
         clock = clock >> 1;
-    }
-
-    // fill up image with filler packets
-    // get_packet will return filler because we haven't loaded the fifo yet.
-    for (n=0; n<HEIGHT; n+=2) {
-        if (mask & (1<<(n>>1))) // make masked lines quiet
-        {
-            memset(ROW(n),0, WIDTH);
-            memcpy(ROW(n+1), ROW(n), WIDTH);
-        }
-        else
-        {
-            get_packet(ROW(n)+24);
-            memcpy(ROW(n+1)+24, ROW(n)+24, 336);
-        }
     }
 
     // set up some resources
