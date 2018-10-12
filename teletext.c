@@ -150,9 +150,10 @@ int main(int argc, char *argv[])
  
     // initialize image buffer with clock run in
     int n, m, clock = 0x275555;
+    int even, odd;
     for (m=0; m<24; m++) {
-        int even = mask_even;
-        int odd = mask_odd;
+        even = mask_even;
+        odd = mask_odd;
         for (n=0; n<HEIGHT; n+=2) {
             if (!(even&1)) ROW(n)[m] = clock&1;
             if (!(odd&1)) ROW(n+1)[m] = clock&1;
@@ -161,6 +162,16 @@ int main(int argc, char *argv[])
         }
         
         clock = clock >> 1;
+    }
+    
+    // initialise active lines with filler packets
+    even = mask_even;
+    odd = mask_odd;
+    for (n=0; n<HEIGHT; n+=2) {
+        if (!(even&1)) get_packet(ROW(n)+24);
+        if (!(odd&1)) get_packet(ROW(n+1)+24);
+        even >>= 1;
+        odd >>= 1;
     }
 
     // set up some resources
