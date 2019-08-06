@@ -77,6 +77,8 @@ int try_set_regs(volatile unsigned int *regs, int argc, char *argv[])
                 regs[6] = 0x00120120;
                 regs[7] = 0x00030003;
                 regs[8] = 0x00120120;
+                /* fallthrough */
+            case PAL_ON:
                 fprintf(stderr, "Teletext output is now on.\n");
                 return 1;
             case NTSC_OFF:
@@ -84,9 +86,9 @@ int try_set_regs(volatile unsigned int *regs, int argc, char *argv[])
                 regs[6] = 0x000500f0;
                 regs[7] = 0x000e0003;
                 regs[8] = 0x000600f0;
-            case PAL_ON:
             case NTSC_ON:
-                fprintf(stderr, "Teletext output is now on.\n");
+                /* fallthrough */
+                fprintf(stderr, "CEA608 output is now on.\n");
                 return 1;
             default:
                 return 0;
@@ -100,6 +102,8 @@ int try_set_regs(volatile unsigned int *regs, int argc, char *argv[])
                 regs[6] = 0x00020120;
                 regs[7] = 0x00130003;
                 regs[8] = 0x00020120;
+                /* fallthrough */
+            case PAL_OFF:
                 fprintf(stderr, "Teletext output is now off.\n");
                 return 1;
             case NTSC_ON:
@@ -107,9 +111,9 @@ int try_set_regs(volatile unsigned int *regs, int argc, char *argv[])
                 regs[6] = 0x000300f0;
                 regs[7] = 0x00100003;
                 regs[8] = 0x000400f0;
-            case PAL_OFF:
+                /* fallthrough */
             case NTSC_OFF:
-                fprintf(stderr, "Teletext output is now off.\n");
+                fprintf(stderr, "CEA608 output is now off.\n");
                 return 1;
             default:
                 return 0;
