@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 #include "bcm_host.h"
 
@@ -53,7 +54,7 @@ VC_RECT_T image_rect;
 #define ROW(n) (image+(PITCH*(n))+OFFSET)
 
 
-void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
+void vsync(void)
 {
 
     int ret;
@@ -87,6 +88,27 @@ void vsync(DISPMANX_UPDATE_HANDLE_T u, void* arg)
 
     }
 }
+
+
+pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+void vsync_callback(DISPMANX_UPDATE_HANDLE_T u, void* arg)
+{
+    pthread_cond_signal(&cond1);
+}
+
+
+void *vsync_thread()
+{
+    while(1) {
+        pthread_mutex_lock(&lock);
+        pthread_cond_wait(&cond1, &lock);
+        vsync();
+        pthread_mutex_unlock(&lock);
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -145,11 +167,14 @@ int main(int argc, char *argv[])
     ret = vc_dispmanx_update_submit_sync( update );
     assert( ret == 0 );
 
+    pthread_t tid1;
+    pthread_create(&tid1, NULL, vsync_thread, NULL);
+
     // BUG: clear any existing callbacks, even to other apps.
     // https://github.com/raspberrypi/userland/issues/218
     vc_dispmanx_vsync_callback(display, NULL, NULL);
 
-    vc_dispmanx_vsync_callback(display, vsync, NULL);
+    vc_dispmanx_vsync_callback(display, vsync_callback, NULL);
 
     if (argc == 2 && argv[1][0] == '-') {
         while(read_packets()) {
