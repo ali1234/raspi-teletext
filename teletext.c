@@ -54,6 +54,10 @@ VC_RECT_T image_rect;
 #define ROW(n) (image+(PITCH*(n))+OFFSET)
 
 
+pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+
 void vsync(void)
 {
 
@@ -64,14 +68,23 @@ void vsync(void)
     assert( update );
     ret = vc_dispmanx_element_change_source( update, element, resource[next_resource]);
     assert( ret == 0 );
-    ret = vc_dispmanx_update_submit_sync( update );
+
+
+    pthread_mutex_lock(&lock);
+
+    pthread_cond_wait(&cond1, &lock);
+    printf("A");
+    ret = vc_dispmanx_update_submit( update, NULL, NULL );
+    printf("B\n");
+
+    pthread_mutex_unlock(&lock);
+
     assert( ret == 0 );
 
     if(next_resource != 2) {
 
         int real_next_resource = next_resource ^ 1;
         next_resource = 2; // use filler if next callback called before this one ends
-
         // fill image
         int n;
         for (n=0; n<HEIGHT; n+=2) {
@@ -90,11 +103,9 @@ void vsync(void)
 }
 
 
-pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-
 void vsync_callback(DISPMANX_UPDATE_HANDLE_T u, void* arg)
 {
+    printf("S");
     pthread_cond_signal(&cond1);
 }
 
@@ -102,10 +113,10 @@ void vsync_callback(DISPMANX_UPDATE_HANDLE_T u, void* arg)
 void *vsync_thread()
 {
     while(1) {
-        pthread_mutex_lock(&lock);
-        pthread_cond_wait(&cond1, &lock);
+//        pthread_mutex_lock(&lock);
+//        pthread_cond_wait(&cond1, &lock);
         vsync();
-        pthread_mutex_unlock(&lock);
+//        pthread_mutex_unlock(&lock);
     }
 }
 
