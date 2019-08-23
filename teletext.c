@@ -38,13 +38,15 @@ pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 uint8_t inflight = 0;
+int framecount = 0;
 int dropcount = 0;
 
 void update_callback(DISPMANX_UPDATE_HANDLE_T u, void* arg)
 {
+    framecount += 1;
     if (inflight > 1) {
         dropcount += 1;
-        printf("Frame drop %d\n", dropcount);
+        printf("Frame drop %d/%d\n", dropcount, framecount);
     }
     inflight = 0;
     //printf("U");
