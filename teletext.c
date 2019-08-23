@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     vc_dispmanx_vsync_callback(display, vsync_callback, NULL);
 
     while(1) {
-        ;
+        sleep(100);
     }
     return 0;
 }
