@@ -50,6 +50,8 @@ void *render_thread_func(void *anon_render_shared)
         ret = vc_dispmanx_resource_write_data(r->resource[next_resource], TYPE, PITCH(r->width), r->image, &r->image_rect);
         assert(ret == 0);
     }
+
+    return NULL;
 }
 
 
