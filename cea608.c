@@ -34,6 +34,8 @@
 
 #define WIDTH (53)
 #define HEIGHT (2)
+#define OFFSET (1)
+#define FIXED (19)
 #define ROW(i, n) (i+(PITCH(WIDTH)*(n))+OFFSET)
 
 
@@ -50,7 +52,7 @@ void draw(uint8_t *image, int next_resource)
 {
     // fill image
     if(next_resource == 0) {
-        get_packet(ROW(image, 0)+19, ROW(image, 1)+19); // +19 because clock never changes
+        get_packet(ROW(image, 0)+FIXED, ROW(image, 1)+FIXED);
     }
 }
 
@@ -59,7 +61,7 @@ void init(uint8_t *image)
 {
     // initialize image buffer with clock run in
     int n, m, clock = 0x61555;
-    for (m=0; m<19; m++) {
+    for (m=0; m<FIXED; m++) {
         for (n=0; n<HEIGHT; n++) {
             ROW(image, n)[m] = clock&1;
         }
@@ -71,7 +73,7 @@ void init(uint8_t *image)
 
 int main(int argc, char *argv[])
 {
-    void *render_handle = render_start(WIDTH, HEIGHT, init, draw, -1);
+    void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1);
 
     if (argc >= 2 && strlen(argv[argc-1])==1 && argv[argc-1][0] == '-') { // last argument is a single '-'
         while(read_packets()) {

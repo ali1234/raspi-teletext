@@ -35,6 +35,8 @@
 
 #define WIDTH (370)
 #define HEIGHT (32)
+#define OFFSET (8)
+#define FIXED (24)
 #define ROW(i, n) (i+(PITCH(WIDTH)*(n))+OFFSET)
 
 uint16_t mask_even;
@@ -48,14 +50,14 @@ void draw(uint8_t *image, int next_resource)
     if(next_resource == 0) {
         m = mask_even;
         for (n = 0; n < HEIGHT; n += 2) {
-            if (!(m & 1)) get_packet(ROW(image, n) + 24); // +24 because clock never changes
+            if (!(m & 1)) get_packet(ROW(image, n) + FIXED); // +24 because clock never changes
             m >>= 1;
         }
     }
     else {
         m = mask_odd;
         for (n=0; n<HEIGHT; n+=2) {
-            if (!(m&1)) get_packet(ROW(image, n+1)+24);
+            if (!(m&1)) get_packet(ROW(image, n+1) + FIXED);
             m >>= 1;
         }
     }
@@ -67,7 +69,7 @@ void init(uint8_t *image)
     // initialize image buffer with clock run in
     int n, m, clock = 0x275555;
     int even, odd;
-    for (m=0; m<24; m++) {
+    for (m=0; m<FIXED; m++) {
         even = mask_even;
         odd = mask_odd;
         for (n=0; n<HEIGHT; n+=2) {
@@ -116,7 +118,7 @@ int main(int argc, char *argv[])
             mask_even = mask_odd;
     }
 
-    void *render_handle = render_start(WIDTH, HEIGHT, init, draw, -1);
+    void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1);
 
     if (argc >= 2 && strlen(argv[argc-1])==1 && argv[argc-1][0] == '-') { // last argument is a single '-'
         while(read_packets()) {
