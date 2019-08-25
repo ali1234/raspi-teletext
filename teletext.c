@@ -39,27 +39,15 @@
 #define FIXED (24)
 #define ROW(i, n) (i+(PITCH(WIDTH)*(n))+OFFSET)
 
-uint16_t mask_even;
-uint16_t mask_odd;
+uint16_t line_mask[2];
 
 
 void draw(uint8_t *image, int next_resource)
 {
-    int n;
-    int m;
-    if(next_resource == 0) {
-        m = mask_even;
-        for (n = 0; n < HEIGHT; n += 2) {
-            if (!(m & 1)) get_packet(ROW(image, n) + FIXED); // +24 because clock never changes
-            m >>= 1;
-        }
-    }
-    else {
-        m = mask_odd;
-        for (n=0; n<HEIGHT; n+=2) {
-            if (!(m&1)) get_packet(ROW(image, n+1) + FIXED);
-            m >>= 1;
-        }
+    int m = line_mask[next_resource];
+    for (int n = 0; n < HEIGHT; n += 2) {
+        if (!(m & 1)) get_packet(ROW(image, n+next_resource) + FIXED); // skip the fixed clock
+        m >>= 1;
     }
 }
 
@@ -70,8 +58,8 @@ void init(uint8_t *image)
     int n, m, clock = 0x275555;
     int even, odd;
     for (m=0; m<FIXED; m++) {
-        even = mask_even;
-        odd = mask_odd;
+        even = line_mask[0];
+        odd = line_mask[1];
         for (n=0; n<HEIGHT; n+=2) {
             if (!(even&1)) ROW(image, n)[m] = clock&1;
             if (!(odd&1)) ROW(image, n+1)[m] = clock&1;
@@ -102,20 +90,20 @@ int main(int argc, char *argv[])
         }
     }
 
-    mask_even = 0; // default to all 16 vbi lines used on both fields
-    mask_odd = 0;
+    line_mask[0] = 0; // default to all 16 vbi lines used on both fields
+    line_mask[1] = 0;
     
     if (mvalue)
     {
-        mask_even = strtol(mvalue,NULL,0);
+        line_mask[0] = strtol(mvalue,NULL,0);
         if (!ovalue)
-            mask_odd = mask_even;
+            line_mask[1] = line_mask[0];
     }
     if (ovalue)
     {
-        mask_odd = strtol(ovalue,NULL,0);
+        line_mask[1] = strtol(ovalue,NULL,0);
         if (!mvalue)
-            mask_even = mask_odd;
+            line_mask[0] = line_mask[1];
     }
 
     void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1);
