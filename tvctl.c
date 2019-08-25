@@ -86,8 +86,8 @@ int try_set_regs(volatile unsigned int *regs, int argc, char *argv[])
                 regs[6] = 0x000500f0;
                 regs[7] = 0x000e0003;
                 regs[8] = 0x000600f0;
-            case NTSC_ON:
                 /* fallthrough */
+            case NTSC_ON:
                 fprintf(stderr, "CEA608 output is now on.\n");
                 return 1;
             default:
