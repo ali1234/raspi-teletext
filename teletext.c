@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     ret = vc_dispmanx_update_submit_sync( update );
     assert( ret == 0 );
     for (n=0; n<3; n++) {
-        ret = vc_dispmanx_resource_delete( resource[0] );
+        ret = vc_dispmanx_resource_delete( resource[n] );
         assert( ret == 0 );
     }
     ret = vc_dispmanx_display_close( display );
