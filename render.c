@@ -37,6 +37,11 @@ void *render_thread_func(void *anon_render_shared)
         ret = vc_dispmanx_element_change_source(update, r->element, r->resource[next_resource]);
         assert(ret == 0);
         pthread_cond_wait(&r->cond, &r->lock);
+        // RPi firmware sends the vsync callback with just a few ms to spare before it
+        // paints the next frame, so we must put a delay here to guarantee that we
+        // always miss the current frame, in order to get a stable framerate.
+        // See https://github.com/raspberrypi/firmware/issues/1182
+        // and https://github.com/raspberrypi/firmware/issues/1154
         usleep(r->delay);
         ret = vc_dispmanx_update_submit(update, NULL, NULL );
         assert(ret == 0);
