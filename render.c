@@ -55,7 +55,7 @@ void vsync_callback(DISPMANX_UPDATE_HANDLE_T u, void *anon_render_shared)
 }
 
 
-void *render_start(int width, int height, InitFunc init_func, DrawFunc draw_func, int delay)
+void *render_start(int width, int height, int offset, int fixed, InitFunc init_func, DrawFunc draw_func, int delay)
 {
     int ret;
     VC_RECT_T src_rect;
@@ -96,7 +96,7 @@ void *render_start(int width, int height, InitFunc init_func, DrawFunc draw_func
         ret = vc_dispmanx_resource_write_data(r->resource[n], TYPE, PITCH(width), r->image, &r->image_rect);
         assert(ret == 0);
     }
-    vc_dispmanx_rect_set(&r->image_rect, OFFSET+24, 0, 336, height); // from now on, only copy the parts that change
+    vc_dispmanx_rect_set(&r->image_rect, offset+fixed, 0, width - (offset+fixed), height); // from now on, only copy the parts that change
 
     update = vc_dispmanx_update_start(10);
     assert(update);
