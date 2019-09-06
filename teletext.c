@@ -77,20 +77,20 @@ int main(int argc, char *argv[])
     int c, level = 100;
     char *mvalue = NULL;
     char *ovalue = NULL;
-    while ((c = getopt(argc,argv,"m:o:l:")) != -1)
+    while ((c = getopt(argc,argv,"l:m:o:")) != -1)
     {
         switch(c)
         {
+            case 'l':
+                level = strtol(optarg,NULL,0);
+                if (level < 0) level == 0;
+                if (level > 100) level == 100;
+                break;
             case 'm':
                 mvalue = optarg;
                 break;
             case 'o':
                 ovalue = optarg;
-                break;
-            case 'l':
-                level = strtol(optarg,NULL,0);
-                if (level < 0) level == 0;
-                if (level > 100) level == 100;
                 break;
         }
     }
