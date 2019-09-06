@@ -62,15 +62,19 @@ void vsync_callback(DISPMANX_UPDATE_HANDLE_T u, void *anon_render_shared)
 }
 
 
-void *render_start(int width, int height, int offset, int fixed, InitFunc init_func, DrawFunc draw_func, int delay)
+void *render_start(int width, int height, int offset, int fixed, InitFunc init_func, DrawFunc draw_func, int delay, int level)
 {
     int ret;
+
+    level = (int)((level * 31) / 100.0);
+    int white = 0x0020 | level | level << 6 | level << 11;
+
     VC_RECT_T src_rect;
     VC_RECT_T dst_rect;
 
     DISPMANX_UPDATE_HANDLE_T update;
     uint32_t vc_image_ptr;
-    unsigned short palette[256] = { 0x0, 0xffff, 0xf000 };
+    unsigned short palette[256] = { 0x0, white, 0xf000 };
 
     // Build the render struct. Must malloc it so it is still valid
     // after this function returns.

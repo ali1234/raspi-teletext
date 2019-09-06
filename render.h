@@ -9,5 +9,5 @@
 typedef void (*InitFunc)(uint8_t *image);
 typedef void (*DrawFunc)(uint8_t *image, int next_resource);
 
-void *render_start(int width, int height, int offset, int fixed, InitFunc init_func, DrawFunc draw_func, int delay);
+void *render_start(int width, int height, int offset, int fixed, InitFunc init_func, DrawFunc draw_func, int delay, int level);
 void render_stop(void *);

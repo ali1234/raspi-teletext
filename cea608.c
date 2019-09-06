@@ -73,7 +73,21 @@ void init(uint8_t *image)
 
 int main(int argc, char *argv[])
 {
-    void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1);
+    int c, level = 100;
+
+    while ((c = getopt(argc,argv,"l:")) != -1)
+    {
+        switch(c)
+        {
+            case 'l':
+                level = strtol(optarg,NULL,0);
+                if (level < 0) level == 0;
+                if (level > 100) level == 100;
+                break;
+        }
+    }
+
+    void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1, level);
 
     if (argc >= 2 && strlen(argv[argc-1])==1 && argv[argc-1][0] == '-') { // last argument is a single '-'
         while(read_packets()) {
