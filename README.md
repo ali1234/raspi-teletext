@@ -48,7 +48,7 @@ registers are in a known state before doing anything. "on" and
 off, or if the registers are in an unknown state.
 
     teletext [-m even field line mask] [-o odd field line mask] \
-             [-l white level] [-]
+             [-l white level] [-f] [-]
 
 Optional line mask arguments are a 16 bit mask to create quiet lines
 in vbi output, first line is LSB, last is MSB. For example running
@@ -60,6 +60,10 @@ fields.
 The white level is specified as a number between 0 and 100. This
 is the "brightness" of the high bits of the teletext signal.
 Default is 100.
+
+The '-f' argument activates full-field mode, where every available
+ine on the display is used for teletext, allowing much greater
+bandwidth. Most decoders do not support this mode.
 
 Running with no arguments will show a demo. Running "teletext -"
 will read packets from stdin and display them. You can therefore

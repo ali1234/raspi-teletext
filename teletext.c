@@ -34,18 +34,18 @@
 #include "demo.h"
 
 #define WIDTH (370)
-#define HEIGHT (32)
 #define OFFSET (8)
 #define FIXED (24)
 #define ROW(i, n) (i+(PITCH(WIDTH)*(n))+OFFSET)
 
+int height = 32;
 uint16_t line_mask[2];
 
 
 void draw(uint8_t *image, int next_resource)
 {
     int m = line_mask[next_resource];
-    for (int n = 0; n < HEIGHT; n += 2) {
+    for (int n = 0; n < height; n += 2) {
         if (!(m & 1)) get_packet(ROW(image, n+next_resource) + FIXED); // skip the fixed clock
         m >>= 1;
     }
@@ -60,7 +60,7 @@ void init(uint8_t *image)
     for (m=0; m<FIXED; m++) {
         even = line_mask[0];
         odd = line_mask[1];
-        for (n=0; n<HEIGHT; n+=2) {
+        for (n=0; n<height; n+=2) {
             if (!(even&1)) ROW(image, n)[m] = clock&1;
             if (!(odd&1)) ROW(image, n+1)[m] = clock&1;
             even >>= 1;
@@ -77,10 +77,13 @@ int main(int argc, char *argv[])
     int c, level = 100;
     char *mvalue = NULL;
     char *ovalue = NULL;
-    while ((c = getopt(argc,argv,"l:m:o:")) != -1)
+    while ((c = getopt(argc,argv,"fl:m:o:")) != -1)
     {
         switch(c)
         {
+            case 'f':
+                height = 576;
+                break;
             case 'l':
                 level = strtol(optarg,NULL,0);
                 if (level < 0) level == 0;
@@ -111,7 +114,7 @@ int main(int argc, char *argv[])
             line_mask[0] = line_mask[1];
     }
 
-    void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1, level);
+    void *render_handle = render_start(WIDTH, height, OFFSET, FIXED, init, draw, -1, level);
 
     if (argc >= 2 && strlen(argv[argc-1])==1 && argv[argc-1][0] == '-') { // last argument is a single '-'
         while(read_packets()) {
