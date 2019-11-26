@@ -70,6 +70,10 @@ int try_set_regs(volatile unsigned int *regs, int argc, char *argv[])
     else
         state = UNKNOWN;
 
+    if (state == UNKNOWN) {
+        fprintf(stderr, "%08x %08x %08x %08x\n", regs[5], regs[6], regs[7], regs[8]);
+    }
+
     if (argc == 2 && argv[1][1] == 'n') {
         switch(state) {
             case PAL_OFF:
@@ -144,12 +148,23 @@ int main(int argc, char **argv)
     if(!try_set_regs(map_base, argc, argv)) {
 
         map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x3f807000);
+
         if(map_base == (void *) -1) {
             fprintf(stderr, "Error mapping register memory.\n"); exit(-1);
         }
 
         if(!try_set_regs(map_base, argc, argv)) {
-            fprintf(stderr, "Could not find registers. Make sure composite video out is enabled.\n");
+
+            map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0xfec12000);
+
+            if(map_base == (void *) -1) {
+                fprintf(stderr, "Error mapping register memory.\n"); exit(-1);
+            }
+
+            if(!try_set_regs(map_base, argc, argv)) {
+                fprintf(stderr, "Could not find registers. Make sure composite video out is enabled.\n");
+            }
+
         }
 
     }
