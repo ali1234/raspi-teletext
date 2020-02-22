@@ -87,7 +87,7 @@ void *render_start(int width, int height, int offset, int fixed, InitFunc init_f
     if (delay > -1) {
         r->delay = delay;
     } else {
-        r->delay = 1000;
+        r->delay = 2000;
     }
     r->width = width;
     r->image = calloc(1, PITCH(width) * height);
