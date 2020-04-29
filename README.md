@@ -14,6 +14,9 @@ Have a Raspberry Pi connected to a TV by composite video.
 It doesn't matter if you are running X or not. Dispmanx will draw over
 anything else.
 
+Raspbian defaults to NTSC composite output. To permanently change it
+to PAL, put `sdtv=2` in `config.txt` and reboot.
+
 Build the programs:
 
     make
