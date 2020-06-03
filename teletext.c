@@ -86,8 +86,8 @@ int main(int argc, char *argv[])
                 break;
             case 'l':
                 level = strtol(optarg,NULL,0);
-                if (level < 0) level == 0;
-                if (level > 100) level == 100;
+                if (level < 0) level = 0;
+                if (level > 100) level = 100;
                 break;
             case 'm':
                 mvalue = optarg;
