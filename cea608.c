@@ -33,7 +33,8 @@
 #include "cea608buffer.h"
 
 #define WIDTH (53)
-#define HEIGHT (2)
+#define VOFFSET (1)
+#define HEIGHT (VOFFSET+2)
 #define OFFSET (1)
 #define FIXED (19)
 #define ROW(i, n) (i+(PITCH(WIDTH)*(n))+OFFSET)
@@ -52,7 +53,7 @@ void draw(uint8_t *image, int next_resource)
 {
     // fill image
     if(next_resource == 0) {
-        get_packet(ROW(image, 1)+FIXED, ROW(image, 0)+FIXED);
+        get_packet(ROW(image, VOFFSET)+FIXED, ROW(image, VOFFSET + 1)+FIXED);
     }
 }
 
@@ -62,7 +63,7 @@ void init(uint8_t *image)
     // initialize image buffer with clock run in
     int n, m, clock = 0x61555;
     for (m=0; m<FIXED; m++) {
-        for (n=0; n<HEIGHT; n++) {
+        for (n=VOFFSET; n<HEIGHT; n++) {
             ROW(image, n)[m] = clock&1;
         }
         clock = clock >> 1;
