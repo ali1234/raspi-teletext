@@ -52,7 +52,7 @@ void draw(uint8_t *image, int next_resource)
 {
     // fill image
     if(next_resource == 0) {
-        get_packet(ROW(image, 1)+FIXED, ROW(image, 0)+FIXED);
+        get_packet(ROW(image, 0)+FIXED, ROW(image, 1)+FIXED);
     }
 }
 
