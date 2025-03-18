@@ -96,6 +96,7 @@ void *render_start(int width, int height, int offset, int fixed, InitFunc init_f
 
     bcm_host_init();
     r->display = vc_dispmanx_display_open(0);
+    assert(r->display);
 
     // set up some resources
     vc_dispmanx_rect_set(&r->image_rect, 0, 0, width, height);
@@ -130,10 +131,12 @@ void *render_start(int width, int height, int offset, int fixed, InitFunc init_f
     // BUG: Clear any existing callbacks, even to other apps.
     // https://github.com/raspberrypi/userland/issues/218
     // TODO: Check if we still need this.
-    vc_dispmanx_vsync_callback(r->display, NULL, NULL);
+    ret = vc_dispmanx_vsync_callback(r->display, NULL, NULL);
+    assert(ret == 0);
 
     // Set the callback function.
-    vc_dispmanx_vsync_callback(r->display, vsync_callback, r);
+    ret = vc_dispmanx_vsync_callback(r->display, vsync_callback, r);
+    assert(ret == 0);
 
     return r;
 }
