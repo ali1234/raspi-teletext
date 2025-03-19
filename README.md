@@ -17,7 +17,16 @@ anything else.
 At least 32MB of GPU memory is required.
 
 Raspbian defaults to NTSC composite output. To permanently change it
-to PAL, put `sdtv=2` in `config.txt` and reboot.
+to PAL, put `sdtv=2` in `config.txt` and reboot. You may need to add
+`video=Composite-1:720x576@50ie,tv_mode=PAL` to `cmdline.txt`, and
+take care _not_ to set `dtoverlay=vc4-kms-v3d,composite` in `config.txt`,
+but possibly `dtoverlay=vc4-fkms-v3d,composite` (or leave it at the
+default).
+
+You may need to install the `libraspberrypi-dev` package to get the
+`bcm_host.h` header and associated library:
+
+    sudo apt-get install libraspberrypi-dev
 
 Build the programs:
 
