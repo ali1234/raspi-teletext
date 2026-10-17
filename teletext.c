@@ -25,9 +25,8 @@
 #include <time.h>
 #include <assert.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/time.h>
-
-#include "bcm_host.h"
 
 #include "render.h"
 #include "buffer.h"
@@ -37,6 +36,14 @@
 #define OFFSET (8)
 #define FIXED (24)
 #define ROW(i, n) (i+(PITCH(WIDTH)*(n))+OFFSET)
+#define VBI_LINES (16)
+
+#ifdef RENDER_KMS
+// all of both fields, including the lines opened up for VBI
+#define FULL_HEIGHT (576 + 2*VBI_LINES)
+#else
+#define FULL_HEIGHT (576)
+#endif
 
 int height = 32;
 uint16_t line_mask[2];
@@ -82,7 +89,7 @@ int main(int argc, char *argv[])
         switch(c)
         {
             case 'f':
-                height = 576;
+                height = FULL_HEIGHT;
                 break;
             case 'l':
                 level = strtol(optarg,NULL,0);
@@ -114,7 +121,7 @@ int main(int argc, char *argv[])
             line_mask[0] = line_mask[1];
     }
 
-    void *render_handle = render_start(WIDTH, height, OFFSET, FIXED, init, draw, -1, level);
+    void *render_handle = render_start(WIDTH, height, OFFSET, FIXED, init, draw, -1, level, VBI_LINES, "PAL");
 
     if (argc >= 2 && strlen(argv[argc-1])==1 && argv[argc-1][0] == '-') { // last argument is a single '-'
         while(read_packets()) {

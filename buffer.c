@@ -23,6 +23,8 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "buffer.h"
+
 #define NBUFFERS 64
 
 uint8_t tt_buffer[NBUFFERS][42];
@@ -73,15 +75,26 @@ void push_packet(uint8_t *src)
 
 int read_packets(void)
 {
+    return read_packets_from(stdin);
+}
+
+int read_packets_from(FILE *f)
+{
     if (((buffer_head+1)%NBUFFERS) == buffer_tail) {
         // wait one field for fifo to empty
         usleep(20000);
         return 1;
     }
-    if (fread(tt_buffer[buffer_head], 42, 1, stdin) == 1) {
+    if (fread(tt_buffer[buffer_head], 42, 1, f) == 1) {
         buffer_head = (buffer_head+1)%NBUFFERS;
         return 1;
     }
     return 0;
 }
 
+void wait_packets_sent(void)
+{
+    while (buffer_head != buffer_tail) {
+        usleep(20000);
+    }
+}

@@ -25,15 +25,27 @@
 #include <time.h>
 #include <assert.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/time.h>
-
-#include "bcm_host.h"
 
 #include "render.h"
 #include "cea608buffer.h"
 
 #define WIDTH (53)
+#ifdef RENDER_KMS
+// KMS can only move both fields up by the same number of lines, while tvctl
+// moves field 1 by two lines and field 2 by one. So open up two lines on
+// each field and put field 2's data on the second of them.
+#define VBI_LINES (2)
+#define HEIGHT (4)
+#define FIELD1_ROW (1)
+#define FIELD2_ROW (2)
+#else
+#define VBI_LINES (0)
 #define HEIGHT (2)
+#define FIELD1_ROW (1)
+#define FIELD2_ROW (0)
+#endif
 #define OFFSET (1)
 #define FIXED (19)
 #define ROW(i, n) (i+(PITCH(WIDTH)*(n))+OFFSET)
@@ -52,7 +64,7 @@ void draw(uint8_t *image, int next_resource)
 {
     // fill image
     if(next_resource == 0) {
-        get_packet(ROW(image, 1)+FIXED, ROW(image, 0)+FIXED);
+        get_packet(ROW(image, FIELD1_ROW)+FIXED, ROW(image, FIELD2_ROW)+FIXED);
     }
 }
 
@@ -60,11 +72,10 @@ void draw(uint8_t *image, int next_resource)
 void init(uint8_t *image)
 {
     // initialize image buffer with clock run in
-    int n, m, clock = 0x61555;
+    int m, clock = 0x61555;
     for (m=0; m<FIXED; m++) {
-        for (n=0; n<HEIGHT; n++) {
-            ROW(image, n)[m] = clock&1;
-        }
+        ROW(image, FIELD1_ROW)[m] = clock&1;
+        ROW(image, FIELD2_ROW)[m] = clock&1;
         clock = clock >> 1;
     }
     draw(image, 0); // load first field in to image
@@ -87,7 +98,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1, level);
+    void *render_handle = render_start(WIDTH, HEIGHT, OFFSET, FIXED, init, draw, -1, level, VBI_LINES, "NTSC");
 
     if (argc >= 2 && strlen(argv[argc-1])==1 && argv[argc-1][0] == '-') { // last argument is a single '-'
         while(read_packets()) {

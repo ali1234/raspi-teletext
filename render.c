@@ -5,6 +5,8 @@
 
 #include "render.h"
 
+#define TYPE (VC_IMAGE_8BPP)
+
 
 typedef struct render_shared {
     DISPMANX_DISPLAY_HANDLE_T   display;
@@ -62,7 +64,7 @@ void vsync_callback(DISPMANX_UPDATE_HANDLE_T u, void *anon_render_shared)
 }
 
 
-void *render_start(int width, int height, int offset, int fixed, InitFunc init_func, DrawFunc draw_func, int delay, int level)
+void *render_start(int width, int height, int offset, int fixed, InitFunc init_func, DrawFunc draw_func, int delay, int level, int vbi_lines, const char *norm)
 {
     int ret;
 
